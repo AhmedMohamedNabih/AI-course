@@ -1,44 +1,48 @@
 import tkinter as tk
 from tkinter import messagebox
 
-class Subject:
-    def __init__(self, name):
-        self.name = name
-        self.grades = []
-
-    def add_grade(self, grade):
-        self.grades.append(grade)
-
-    def __str__(self):
-        return f"{self.name}: {self.grades}"
-
 class Student:
     def __init__(self, name):
         self.name = name
         self.subjects = {}
 
-    def add_subject(self, subject):
-        self.subjects[subject.name] = subject
+    def add_grade(self, subject, grade):
+        if subject not in self.subjects:
+            self.subjects[subject] = []
+        self.subjects[subject].append(grade)
 
-    def add_grade(self, subject_name, grade):
-        if subject_name in self.subjects:
-            self.subjects[subject_name].add_grade(grade)
+    def remove_grade(self, subject, grade):
+        if subject in self.subjects and grade in self.subjects[subject]:
+            self.subjects[subject].remove(grade)
         else:
-            print("Subject not found.")
+            messagebox.showerror('Error', 'Grade not found.')
 
-    def __str__(self):
-        subjects_info = ', '.join(str(subject) for subject in self.subjects.values())
-        return f"Student: {self.name}, Subjects: [{subjects_info}]"
+    def update_grade(self, subject, old_grade, new_grade):
+        if subject in self.subjects and old_grade in self.subjects[subject]:
+            self.subjects[subject].remove(old_grade)
+            self.subjects[subject].append(new_grade)
+        else:
+            messagebox.showerror('Error', 'Grade not found.')
 
 Students = {}
 
 def add_student():
     name = student_name_entry.get()
     if name in Students:
-        messagebox.showerror('Error', 'Student already exists')
+        messagebox.showerror('Error', 'Student already exists.')
     else:
         Students[name] = Student(name)
-        messagebox.showinfo("Success", "Student added.")
+        update_student_list()
+        messagebox.showinfo("Info", "Student added.")
+
+def delete_student():
+    name = student_name_entry.get()
+    if name in Students:
+        del Students[name]
+        update_student_list()
+        messagebox.showinfo("Info", "Student deleted.")
+    else:
+        messagebox.showerror('Error', 'Student not found.')
 
 def add_grade():
     student_name = student_name_entry.get()
@@ -47,10 +51,8 @@ def add_grade():
         grade = int(grade_entry.get())
         if student_name in Students:
             if 0 <= grade <= 100:
-                if subject_name not in Students[student_name].subjects:
-                    Students[student_name].add_subject(Subject(subject_name))
                 Students[student_name].add_grade(subject_name, grade)
-                messagebox.showinfo('Success', 'Grade added')
+                messagebox.showinfo('Info', 'Grade added.')
             else:
                 messagebox.showerror('Error', 'Grade must be between 0 and 100.')
         else:
@@ -60,50 +62,51 @@ def add_grade():
     subject_name_entry.delete(0, tk.END)
     grade_entry.delete(0, tk.END)
 
-def save_data():
-    filename = filename_entry.get()
+def update_grade():
+    student_name = student_name_entry.get()
+    subject_name = subject_name_entry.get()
     try:
-        with open(filename, 'w') as file:
-            for student in Students.values():
-                file.write(f"{student.name}\n")
-                for subject_name, subject in student.subjects.items():
-                    grades = ','.join(map(str, subject.grades))
-                    file.write(f"{subject_name}:{grades}\n")
-        messagebox.showinfo("Success", "Data saved successfully.")
-    except IOError as e:
-        messagebox.showerror("Error", f"Error: {e}")
+        old_grade = int(old_grade_entry.get())
+        new_grade = int(new_grade_entry.get())
+        if student_name in Students:
+            if 0 <= old_grade <= 100 and 0 <= new_grade <= 100:
+                Students[student_name].update_grade(subject_name, old_grade, new_grade)
+                messagebox.showinfo('Info', 'Grade updated.')
+            else:
+                messagebox.showerror('Error', 'Grades must be between 0 and 100.')
+        else:
+            messagebox.showerror('Error', 'Student not found.')
+    except ValueError:
+        messagebox.showerror("Error", "Please enter valid grades.")
+    subject_name_entry.delete(0, tk.END)
+    old_grade_entry.delete(0, tk.END)
+    new_grade_entry.delete(0, tk.END)
 
-def load_data():
-    filename = filename_entry.get()
-    global Students
-    Students = {}
+def remove_grade():
+    student_name = student_name_entry.get()
+    subject_name = subject_name_entry.get()
     try:
-        with open(filename, 'r') as file:
-            lines = file.readlines()
-            current_student = None
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                if ':' not in line:
-                    current_student = Student(line)
-                    Students[current_student.name] = current_student
-                else:
-                    subject_name, grades_str = line.split(':')
-                    grades = list(map(int, grades_str.split(',')))
-                    subject = Subject(subject_name)
-                    subject.grades = grades
-                    if current_student:
-                        current_student.add_subject(subject)
-        messagebox.showinfo("Success", "Data loaded successfully.")
-    except FileNotFoundError:
-        messagebox.showerror("Error", "File not found.")
-    except IOError as e:
-        messagebox.showerror("Error", f"Error reading data from file: {e}")
+        grade = int(grade_remove_entry.get())
+        if student_name in Students:
+            if 0 <= grade <= 100:
+                Students[student_name].remove_grade(subject_name, grade)
+                messagebox.showinfo('Info', 'Grade removed.')
+            else:
+                messagebox.showerror('Error', 'Grade must be between 0 and 100.')
+        else:
+            messagebox.showerror('Error', 'Student not found.')
+    except ValueError:
+        messagebox.showerror("Error", "Please enter a valid grade.")
+    grade_remove_entry.delete(0, tk.END)
+
+def update_student_list():
+    student_list.delete(0, tk.END)
+    for student in Students:
+        student_list.insert(tk.END, student)
 
 root = tk.Tk()
-root.title('Student Grade Management')
-root.geometry('400x300')
+root.title('Student Management')
+root.geometry('400x350')
 
 tk.Label(root, text="Student Name").grid(row=0, column=0, padx=10, pady=5)
 student_name_entry = tk.Entry(root)
@@ -117,20 +120,37 @@ tk.Label(root, text="Grade").grid(row=2, column=0, padx=10, pady=5)
 grade_entry = tk.Entry(root)
 grade_entry.grid(row=2, column=1, padx=10, pady=5)
 
-tk.Label(root, text="Filename").grid(row=3, column=0, padx=10, pady=5)
-filename_entry = tk.Entry(root)
-filename_entry.grid(row=3, column=1, padx=10, pady=5)
+tk.Label(root, text="Old Grade").grid(row=3, column=0, padx=10, pady=5)
+old_grade_entry = tk.Entry(root)
+old_grade_entry.grid(row=3, column=1, padx=10, pady=5)
+
+tk.Label(root, text="New Grade").grid(row=4, column=0, padx=10, pady=5)
+new_grade_entry = tk.Entry(root)
+new_grade_entry.grid(row=4, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Remove Grade").grid(row=5, column=0, padx=10, pady=5)
+grade_remove_entry = tk.Entry(root)
+grade_remove_entry.grid(row=5, column=1, padx=10, pady=5)
 
 add_student_button = tk.Button(root, text="Add Student", command=add_student)
-add_student_button.grid(row=4, column=0, padx=10, pady=5)
+add_student_button.grid(row=6, column=0, padx=10, pady=5)
+
+delete_student_button = tk.Button(root, text="Delete Student", command=delete_student)
+delete_student_button.grid(row=6, column=1, padx=10, pady=5)
 
 add_grade_button = tk.Button(root, text="Add Grade", command=add_grade)
-add_grade_button.grid(row=4, column=1, padx=10, pady=5)
+add_grade_button.grid(row=7, column=0, padx=10, pady=5)
 
-save_button = tk.Button(root, text="Save Data", command=save_data)
-save_button.grid(row=5, column=0, padx=10, pady=5)
+update_grade_button = tk.Button(root, text="Update Grade", command=update_grade)
+update_grade_button.grid(row=7, column=1, padx=10, pady=5)
 
-load_button = tk.Button(root, text="Load Data", command=load_data)
-load_button.grid(row=5, column=1, padx=10, pady=5)
+remove_grade_button = tk.Button(root, text="Remove Grade", command=remove_grade)
+remove_grade_button.grid(row=8, column=0, padx=10, pady=5, columnspan=2)
+
+tk.Label(root, text="Students List").grid(row=9, column=0, padx=10, pady=5)
+student_list = tk.Listbox(root)
+student_list.grid(row=9, column=1, padx=10, pady=5, rowspan=4, sticky=tk.N+tk.S+tk.E+tk.W)
+
+update_student_list()
 
 root.mainloop()
